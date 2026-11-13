@@ -106,7 +106,7 @@ New → Contacted → Counselling → Documents → Applied → Offer → Won / 
 
 ## Author
 
-**[Orobe Munachi]**
+**Name: [Orobe Munachi]**
 Email: [orobemunachi22@gmail.com]
 LinkedIn: [linkedin.com/in/munachiorobe]
 
