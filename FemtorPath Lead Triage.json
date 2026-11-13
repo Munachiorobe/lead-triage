@@ -1,0 +1,482 @@
+{
+  "name": "FemtorPath Lead Triage",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "d426711c-6762-47dc-baaf-49b19362bbb4",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "femtorpath_leads",
+        "limit": 1,
+        "filterType": "string",
+        "filterString": "scored_at=is.null&destination_country=in.(UK,Canada)"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        -224
+      ],
+      "id": "899782b3-e45d-4063-98d4-0853e6713b95",
+      "name": "Get many rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bz7xrb6GnPyboWKc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const l = $input.item.json;\n \nconst budget  = {\"Under ₦15m\":5,\"₦15m - ₦30m\":12,\"₦30m - ₦50m\":19,\"Above ₦50m\":25};\nconst funds   = {\"Ready (available now)\":20,\"Arranging (within 3 months)\":12,\"Not yet / unsure\":3};\nconst english = {\"Have a valid result\":15,\"Exempt / not required\":12,\"Booked a test\":10,\"Planning to take\":6,\"Not yet\":0};\nconst source  = {\"Referral\":10,\"Walk-in\":9,\"Website form\":8,\"Event\":8,\"Instagram\":6,\"WhatsApp\":6,\"Facebook\":5};\nconst MONTHS  = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};\n \nlet intakePts = 5;\nconst m = String(l.intake || \"\").match(/([A-Za-z]{3})[a-z]*\\s+(\\d{4})/);\nif (m && MONTHS[m[1]] !== undefined) {\n  const months = (new Date(+m[2], MONTHS[m[1]], 1) - new Date()) / (1000*60*60*24*30);\n  intakePts = months <= 6 ? 20 : months <= 12 ? 12 : 5;\n}\nconst program = String(l.program_interest || \"\").trim();\nconst programPts = (program.length >= 4 && !/not sure/i.test(program)) ? 10 : 0;\n \nconst score = (budget[l.budget_range]||0) + (funds[l.funds_status]||0) + (english[l.english_test_status]||0)\n            + intakePts + programPts + (source[l.source]||5);\nconst lead_score = Math.min(100, score);\nconst priority = lead_score >= 70 ? \"Hot\" : lead_score >= 40 ? \"Warm\" : \"Cold\";\n \nreturn { json: { ...l, lead_score, priority } };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "1c27923b-16f5-423c-a585-cc5c651be4f9",
+      "name": "Get unscored leads"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const l = $input.item.json;\n\nconst budget = {\"Under ₦15m\":5,\"₦15m - ₦30m\":12,\"₦30m - ₦50m\":19,\"Above ₦50m\":25};\nconst funds = {\"Ready (available now)\":20,\"Arranging (within 3 months)\":12,\"Not yet / unsure\":3};\nconst english = {\"Have a valid result\":15,\"Exempt / not required\":12,\"Booked a test\":10,\"Planning to take\":6,\"Not yet\":0};\nconst source = {\"Referral\":10,\"Walk-in\":9,\"Website form\":8,\"Event\":8,\"Instagram\":6,\"WhatsApp\":6,\"Facebook\":5};\nconst MONTHS = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};\n\nlet intakePts = 5;\nconst m = String(l.intake || \"\").match(/([A-Za-z]{3})[a-z]*\\s+(\\d{4})/);\nif (m && MONTHS[m[1]] !== undefined) {\n  const months = (new Date(+m[2], MONTHS[m[1]], 1) - new Date()) / (1000*60*60*24*30);\n  intakePts = months <= 6 ? 20 : months <= 12 ? 12 : 5;\n}\n\nconst program = String(l.program_interest || \"\").trim();\nconst programPts = (program.length >= 4 && !/not sure/i.test(program)) ? 10 : 0;\n\nconst rawScore = (budget[l.budget_range]||0) + (funds[l.funds_status]||0) + (english[l.english_test_status]||0)\n               + intakePts + programPts;\nconst lead_score = Math.min(100, Math.round(rawScore * 100 / 90));\nconst priority = lead_score >= 70 ? \"Hot\" : lead_score >= 40 ? \"Warm\" : \"Cold\";\n\nreturn { json: { ...l, lead_score, priority } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        0
+      ],
+      "id": "9abf6bcc-f95f-4e8c-9d9a-6842214f7ec4",
+      "name": "Score lead"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Lead details:\nName: {{ $json.full_name }}\nDestination: {{ $json.destination_country }}\nCourse: {{ $json.program_interest }} ({{ $json.study_level }})\nIntake: {{ $json.intake }}\nBudget per year: {{ $json.budget_range }}\nFunds: {{ $json.funds_status }}\nEnglish test: {{ $json.english_test_status }}\nSource: {{ $json.source }}\nNotes: {{ $json.notes }}\nScore: {{ $json.lead_score }}/100 ({{ $json.priority }})\nAssigned counselor: {{ $json.counselor_name }}\n",
+        "options": {
+          "systemMessage": "You are an assistant for FemtorPath Consultancy, a Nigerian study-abroad agency that handles only the UK and Canada.\nYou receive one student enquiry that has already been scored by fixed rules. Do not change the score.\n \nReturn ONLY valid JSON with exactly these keys and nothing else:\n{\"score_reason\":\"...\",\"ai_next_action\":\"...\",\"draft_message\":\"...\"}\n \nRules:\n- score_reason: one sentence, maximum 25 words, naming the 2 or 3 factors that mattered most (funds, intake timing, budget, English test).\n- ai_next_action: one short instruction for the counselor. For Hot leads say to call within 2 hours and offer a consultation. For Warm say to message today and follow up within 24 hours. For Cold say to send an information message and call within 24 hours.\n- draft_message: a friendly WhatsApp message of 2 to 4 sentences from the counselor to the student. Use the student's first name, mention the destination and course, sign it with the counselor's name and FemtorPath Consultancy, and end with a question about a good time for a short call.\n- Never promise admission, scholarships or a visa outcome. Never give immigration or legal advice. Do not invent facts that are not in the enquiry.\n- Plain text only inside the JSON. No markdown, no code fences.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        432,
+        -48
+      ],
+      "id": "4ccad03a-30da-4c59-943c-51a331415d2d",
+      "name": "AI Agent",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": "openrouter/free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        480,
+        160
+      ],
+      "id": "68d941d4-2ee9-46a2-a69d-ec4bff37ac17",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "PE7ikuTJszKfBvBX",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $('Score lead').first().json;\nconst dest = String(lead.destination_country || '').toLowerCase();\nlet list = $input.all().map(i => i.json).filter(c => c.id);\n\n// keep only active counselors who cover this lead's country\nlist = list.filter(c => c.is_active !== false &&\n  String(c.coverage_area || '').toLowerCase().includes(dest));\n\n// fewest active leads first\nlist.sort((a, b) => (a.active_lead_count || 0) - (b.active_lead_count || 0));\nconst c = list[0] || null;\n \nreturn [{ json: {\n  ...lead,\n  counselor_id: c ? c.id : null,\n  counselor_name: c ? c.name : \"Unassigned\",\n  counselor_email: c ? c.email : null,\n  counselor_telegram: c ? c.telegram_chat_id : null,\n  counselor_count: c ? (c.active_lead_count || 0) : 0\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        240
+      ],
+      "id": "195308bb-d98d-4c5d-9fb4-dffcf9552e5a",
+      "name": "Pick counselor"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const lead = $('Pick counselor').item.json;\nlet ai = {};\ntry {\n  let raw = String($input.item.json.output || \"\");\n  const s = raw.indexOf(\"{\"), e = raw.lastIndexOf(\"}\");\n  ai = JSON.parse(raw.slice(s, e + 1));\n} catch (err) { ai = {}; }\n \nconst first = String(lead.full_name || \"there\").split(\" \")[0];\nconst nextDefault = lead.priority === \"Hot\"\n  ? \"Call within 2 hours and offer a consultation.\"\n  : lead.priority === \"Warm\"\n  ? \"Message today and follow up within 24 hours.\"\n: \"Send an information message and call within 24 hours.\"; \nreturn { json: {\n  ...lead,\n  score_reason: ai.score_reason ||\n    (\"Scored \" + lead.lead_score + \"/100 from budget, funds, intake timing, English test, course clarity and source.\"),\n  ai_next_action: ai.ai_next_action || nextDefault,\n  ai_draft_message: ai.draft_message ||\n    (\"Hello \" + first + \", thank you for your interest in studying in \" + lead.destination_country +\n     \". I'm \" + lead.counselor_name + \" from FemtorPath Consultancy. When is a good time for a quick call?\")\n}};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -240
+      ],
+      "id": "a2e21eac-838e-429f-8e88-c0b5d3428986",
+      "name": "Parse AI"
+    },
+    {
+      "parameters": {
+        "content": "Lead Triage AI is a lead-generation system that scores leads, prioritises them, assigns them to the right counsellors, alerts counsellors, and sends confirmation emails to leads",
+        "width": 592
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        896,
+        160
+      ],
+      "typeVersion": 1,
+      "id": "248316ab-7882-440f-9ee9-1f1da32927db",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "counselors",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "=={{ \"coverage_area=ilike.*\" + $json.destination_country + \"*&is_active=eq.true\" }}\n"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        208,
+        -240
+      ],
+      "id": "85afbb46-50fa-4b51-a573-5b6387042628",
+      "name": "Get Counselors",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "bz7xrb6GnPyboWKc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "femtorpath_leads",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "=lead_score",
+              "fieldValue": "={{ $json.lead_score }}"
+            },
+            {
+              "fieldId": "priority",
+              "fieldValue": "={{ $json.priority }}"
+            },
+            {
+              "fieldId": "score_reason",
+              "fieldValue": "={{ $json.score_reason }}"
+            },
+            {
+              "fieldId": "ai_next_action",
+              "fieldValue": "={{ $json.ai_next_action }}"
+            },
+            {
+              "fieldId": "assigned_counselor",
+              "fieldValue": "={{ $json.counselor_id }}"
+            },
+            {
+              "fieldId": "assigned_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "scored_at",
+              "fieldValue": "={{ $now.toISO()}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        784,
+        0
+      ],
+      "id": "05ae807b-1be2-4e65-8884-cdb9f996e3b3",
+      "name": "Save Lead",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bz7xrb6GnPyboWKc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "counselors",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Parse AI').item.json.counselor_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "active_lead_count",
+              "fieldValue": "={{ $('Parse AI').item.json.counselor_count + 1 }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -256
+      ],
+      "id": "6a1aa2f8-76d3-4eaf-a345-e43ac03916e6",
+      "name": "Update Counselor Workload",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bz7xrb6GnPyboWKc",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fromEmail": "femtorpath.demo@gmail.com",
+        "toEmail": "={{ $('Parse AI').item.json.counselor_email }}",
+        "subject": "={{ '[' + $('Parse AI').item.json.priority + '] New ' + $('Parse AI').item.json.destination_country + ' lead: ' + $('Parse AI').item.json.full_name + ' (' + $('Parse AI').item.json.lead_score + '/100)' }}",
+        "emailFormat": "text",
+        "text": "=New {{ $('Parse AI').item.json.priority }} lead assigned to you.\n \nName: {{ $('Parse AI').item.json.full_name }}\nPhone: {{ $('Parse AI').item.json.phone_number }}\nEmail: {{ $('Parse AI').item.json.email }}\nDestination: {{ $('Parse AI').item.json.destination_country }}\nCourse: {{ $('Parse AI').item.json.program_interest }} ({{ $('Parse AI').item.json.study_level }})\nIntake: {{ $('Parse AI').item.json.intake }}\nBudget: {{ $('Parse AI').item.json.budget_range }}\nFunds: {{ $('Parse AI').item.json.funds_status }}\nEnglish test: {{ $('Parse AI').item.json.english_test_status }}\nScore: {{ $('Parse AI').item.json.lead_score }}/100\nWhy: {{ $('Parse AI').item.json.score_reason }}\nNext action: {{ $('Parse AI').item.json.ai_next_action }}\n \nSuggested message:\n{{ $('Parse AI').item.json.ai_draft_message }}\n \nOpen WhatsApp with this message ready:\nhttps://wa.me/{{ $('Parse AI').item.json.phone_number.replace(/\\D/g,'') }}?text={{ encodeURIComponent($('Parse AI').item.json.ai_draft_message) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1104,
+        -256
+      ],
+      "id": "c02c449e-58c8-4d8d-a682-99a703e77d3d",
+      "name": "Email counselor",
+      "webhookId": "9f7bebf0-d093-41ed-b128-243aed228087",
+      "credentials": {
+        "smtp": {
+          "id": "dV4QR8vPuR0mft1M",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "femtorpath.demo@gmail.com",
+        "toEmail": "={{ $('Parse AI').item.json.email }}",
+        "subject": "We received your study enquiry",
+        "emailFormat": "text",
+        "text": "=Hello {{ $('Parse AI').item.json.full_name.split(' ')[0] }},\n \nThank you for contacting FemtorPath Consultancy about studying in {{ $('Parse AI').item.json.destination_country }}.\n \nYour enquiry has been assigned to {{ $('Parse AI').item.json.counselor_name }}, who will contact you within 24 hours.\n \nTo pick a time for a free consultation straight away, use this link:\nhttps://calendly.com/femtorpath-demo/study-guide-meeting\n \nFemtorPath Consultancy\nWe do not guarantee admission or visa outcomes.\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1328,
+        -256
+      ],
+      "id": "d8f8328b-9d3c-431f-b52d-60a6a853b3af",
+      "name": "Email student",
+      "webhookId": "7b4a396a-1816-4db2-9db4-0933c1bc5420",
+      "credentials": {
+        "smtp": {
+          "id": "dV4QR8vPuR0mft1M",
+          "name": "SMTP account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Get unscored leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get unscored leads": {
+      "main": [
+        [
+          {
+            "node": "Score lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score lead": {
+      "main": [
+        [
+          {
+            "node": "Get Counselors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick counselor": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI": {
+      "main": [
+        [
+          {
+            "node": "Save Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Counselors": {
+      "main": [
+        [
+          {
+            "node": "Pick counselor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Lead": {
+      "main": [
+        [
+          {
+            "node": "Update Counselor Workload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Counselor Workload": {
+      "main": [
+        [
+          {
+            "node": "Email counselor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email counselor": {
+      "main": [
+        [
+          {
+            "node": "Email student",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email student": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6b0ec1cc-198b-4e17-b5d0-977ea8c7f502",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8c27f11e8692d8c1a832a67d24bf456fd0ae5bc6640bb80247a70dbec94b89d8"
+  },
+  "nodeGroups": [],
+  "id": "sQgxAiyk4XPBogbE",
+  "tags": []
+}

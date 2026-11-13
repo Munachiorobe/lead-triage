@@ -1,0 +1,227 @@
+{
+  "name": "FemtorPath Lead Triage- Daily Follow-up Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cd2f3d55-ebf9-4769-8f99-8d85d5fb0bba",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "femtorpath_leads",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Map counselor').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "last_reminder_sent",
+              "fieldValue": "={{ $today.toFormat('yyyy-MM-dd') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        0
+      ],
+      "id": "e1a625f2-7aaf-4b05-9bad-49701229adc1",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bz7xrb6GnPyboWKc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "femtorpath_leads",
+        "returnAll": true,
+        "filterType": "string",
+        "filterString": "=={{ \"next_followup_date=lte.\" + $today.toFormat('yyyy-MM-dd') + \"&status=not.in.(Won,Lost,Enrolled,Closed)&or=(last_reminder_sent.is.null,last_reminder_sent.lt.\" + $today.toFormat('yyyy-MM-dd') + \")\" }}"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "abc07b79-8600-4904-94f3-3df028d8d09a",
+      "name": "Get due leads",
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "bz7xrb6GnPyboWKc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "counselors",
+        "returnAll": true,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": []
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        192,
+        0
+      ],
+      "id": "d79c98e6-6bd7-4837-8ba0-0e63b82ca1fd",
+      "name": "Get counselors",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bz7xrb6GnPyboWKc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0C07MFMLE9",
+          "mode": "list",
+          "cachedResultName": "all-femtor-paths-leads"
+        },
+        "text": "=⏰ *Follow-up due* ({{ $json.destination_country }})\nLead: {{ $json.full_name }}  |  Phone: {{ $json.phone_number }}\nPriority: {{ $json.priority || 'n/a' }}  |  Score: {{ $json.lead_score ?? 'n/a' }}/100\nCounselor: {{ $json.counselor_name }}\nStatus: {{ $json.status }}  |  Due: {{ $json.next_followup_date }}\nNext action: {{ $json.ai_next_action || 'Check lead and follow up' }}\nWhatsApp: https://wa.me/{{ String($json.phone_number).replace(/\\D/g,'') }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        832,
+        0
+      ],
+      "id": "e8c076c3-aac3-48aa-ae1e-4bb3147f36cf",
+      "name": "Slack reminder",
+      "webhookId": "1fc128d1-07dd-476c-bb2f-83f95a3252c2",
+      "credentials": {
+        "slackApi": {
+          "id": "XbRq2q3Q8M9NfFQX",
+          "name": "Slack account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const lead = $input.item.json;\nconst counselors = $('Get counselors').all().map(i => i.json);\nconst c = counselors.find(x => String(x.id) === String(lead.assigned_counselor));\nreturn { json: { ...lead,\n  counselor_name: c ? c.name : (lead.assigned_counselor || 'Unassigned'),\n  counselor_email: c ? c.email : null } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        0
+      ],
+      "id": "c1b45934-d43d-461c-976f-ccf71e6c2683",
+      "name": "Map counselor"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get counselors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get due leads": {
+      "main": [
+        [
+          {
+            "node": "Map counselor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get counselors": {
+      "main": [
+        [
+          {
+            "node": "Get due leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack reminder": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map counselor": {
+      "main": [
+        [
+          {
+            "node": "Slack reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "Africa/Lagos",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "781cb815-b8a1-45e1-9f7a-3a1396a616fa",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8c27f11e8692d8c1a832a67d24bf456fd0ae5bc6640bb80247a70dbec94b89d8"
+  },
+  "nodeGroups": [],
+  "id": "f5lXKVsx2OTbLXfn",
+  "tags": []
+}
