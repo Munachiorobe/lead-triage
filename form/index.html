@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study in the UK or Canada | FemtorPath Consultancy</title>
+<style>
+  :root{--navy:#14263f;--blue:#1f5fbf;--ink:#1e2733;--mute:#5b6673;--line:#d9dee5;--bg:#f3f5f8;--ok:#0e8a6a;--err:#b42318}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Calibri,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--navy);color:#fff;padding:28px 16px;text-align:center}
+  header h1{margin:0 0 6px;font-size:26px}
+  header p{margin:0;color:#c9d6ea;font-size:16px}
+  main{max-width:640px;margin:-18px auto 40px;padding:0 16px}
+  form{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px}
+  label{display:block;font-weight:600;margin:16px 0 6px;font-size:15px}
+  .hint{font-weight:400;color:var(--mute);font-size:13px}
+  input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:16px;background:#fff}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--blue);border-color:var(--blue)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.row{grid-template-columns:1fr}}
+  .consent{display:flex;gap:10px;align-items:flex-start;margin-top:18px;font-size:14px;color:var(--mute)}
+  .consent input{width:auto;margin-top:3px}
+  button{margin-top:20px;width:100%;padding:14px;border:0;border-radius:8px;background:var(--blue);color:#fff;font-size:17px;font-weight:700;cursor:pointer}
+  button:disabled{background:#8aa6d6;cursor:wait}
+  #msg{margin-top:16px;padding:14px;border-radius:8px;display:none;font-size:15px}
+  #msg.ok{display:block;background:#e7f6f1;color:#0a5f49;border:1px solid #b9e4d6}
+  #msg.err{display:block;background:#fdecea;color:var(--err);border:1px solid #f5c2bd}
+  .hp{position:absolute;left:-9999px;height:0;overflow:hidden}
+  footer{text-align:center;color:var(--mute);font-size:13px;padding-bottom:30px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Start your UK or Canada study journey</h1>
+  <p>Tell us about your plans. A FemtorPath counselor will contact you within 24 hours.</p>
+</header>
+<main>
+<form id="f" novalidate>
+  <label for="full_name">Full name</label>
+  <input id="full_name" name="full_name" autocomplete="name" required>
+
+  <div class="row">
+    <div>
+      <label for="phone_number">WhatsApp number <span class="hint">e.g. 0803 123 4567</span></label>
+      <input id="phone_number" name="phone_number" inputmode="tel" autocomplete="tel" required>
+    </div>
+    <div>
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label for="destination_country">Where do you want to study?</label>
+      <select id="destination_country" name="destination_country" required>
+        <option value="">Select</option><option>UK</option><option>Canada</option>
+      </select>
+    </div>
+    <div>
+      <label for="study_level">Level of study</label>
+      <select id="study_level" name="study_level" required>
+        <option value="">Select</option>
+        <option>Foundation / Diploma</option><option>Undergraduate</option>
+        <option>Postgraduate (Masters)</option><option>PhD / Research</option>
+      </select>
+    </div>
+  </div>
+
+  <label for="program_interest">Course or field of interest <span class="hint">e.g. MSc Data Science, Nursing</span></label>
+  <input id="program_interest" name="program_interest" required>
+
+  <div class="row">
+    <div>
+      <label for="intake">Preferred intake</label>
+      <select id="intake" name="intake" required>
+        <option value="">Select</option>
+        <option>Jan 2027</option><option>May 2027</option><option>Sep 2027</option>
+        <option>Jan 2028</option><option>Sep 2028</option><option>Not sure yet</option>
+      </select>
+    </div>
+    <div>
+      <label for="budget_range">Yearly budget <span class="hint">tuition + living</span></label>
+      <select id="budget_range" name="budget_range" required>
+        <option value="">Select</option>
+        <option>Under ₦15m</option><option>₦15m - ₦30m</option>
+        <option>₦30m - ₦50m</option><option>Above ₦50m</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label for="funds_status">Are your funds ready?</label>
+      <select id="funds_status" name="funds_status" required>
+        <option value="">Select</option>
+        <option>Ready (available now)</option><option>Arranging (within 3 months)</option><option>Not yet / unsure</option>
+      </select>
+    </div>
+    <div>
+      <label for="english_test_status">English test (IELTS etc.)</label>
+      <select id="english_test_status" name="english_test_status" required>
+        <option value="">Select</option>
+        <option>Have a valid result</option><option>Booked a test</option>
+        <option>Planning to take</option><option>Exempt / not required</option><option>Not yet</option>
+      </select>
+    </div>
+  </div>
+
+  <label for="notes">Anything else we should know? <span class="hint">(optional)</span></label>
+  <textarea id="notes" name="notes" rows="3"></textarea>
+
+  <div class="hp" aria-hidden="true"><label>Leave this empty<input id="website" name="website" tabindex="-1" autocomplete="off"></label></div>
+
+  <label class="consent"><input type="checkbox" id="consent" required>
+    <span>I agree that FemtorPath Consultancy may store my details and contact me by phone, WhatsApp and email about my study plans.</span></label>
+
+  <button id="btn" type="submit">Submit my enquiry</button>
+  <div id="msg" role="status"></div>
+</form>
+</main>
+<footer>FemtorPath Consultancy &middot; We do not guarantee admission or visa outcomes.</footer>
+
+<script>
+/* ======= CONFIG: change these two lines ======= */
+const SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
+/* ============================================== */
+
+const SOURCES = {instagram:"Instagram",facebook:"Facebook",whatsapp:"WhatsApp",referral:"Referral",event:"Event",walkin:"Walk-in"};
+const src = SOURCES[(new URLSearchParams(location.search).get("src")||"").toLowerCase()] || "Website form";
+
+function normalizePhone(p){
+  p = p.replace(/[\s\-().]/g,"");
+  if (p.startsWith("00")) p = "+" + p.slice(2);
+  else if (p.startsWith("0")) p = "+234" + p.slice(1);
+  else if (!p.startsWith("+")) p = "+" + p;
+  return p;
+}
+const f = document.getElementById("f"), btn = document.getElementById("btn"), msg = document.getElementById("msg");
+function show(cls, text){ msg.className = cls; msg.textContent = text; }
+
+f.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  msg.className = "";
+  const v = id => document.getElementById(id).value.trim();
+  if (v("website")) { show("ok","Thank you. We will be in touch."); return; }   // spam trap
+  const required = ["full_name","phone_number","email","destination_country","study_level","program_interest","intake","budget_range","funds_status","english_test_status"];
+  for (const id of required) if (!v(id)) { show("err","Please fill in all required fields."); document.getElementById(id).focus(); return; }
+  if (!/^\S+@\S+\.\S+$/.test(v("email"))) { show("err","Please enter a valid email address."); return; }
+  const phone = normalizePhone(v("phone_number"));
+  if (!/^\+\d{10,15}$/.test(phone)) { show("err","Please enter a valid phone number."); return; }
+  if (!document.getElementById("consent").checked) { show("err","Please tick the consent box so we can contact you."); return; }
+
+  const payload = {
+    full_name: v("full_name"), phone_number: phone, email: v("email").toLowerCase(),
+    destination_country: v("destination_country"), study_level: v("study_level"),
+    program_interest: v("program_interest"), intake: v("intake"), budget_range: v("budget_range"),
+    funds_status: v("funds_status"), english_test_status: v("english_test_status"),
+    notes: v("notes") || null, source: src,
+    consent_given: true, consent_at: new Date().toISOString()
+  };
+
+  btn.disabled = true; btn.textContent = "Sending...";
+  try {
+    const res = await fetch(SUPABASE_URL + "/rest/v1/femtorpath_leads", {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"          // anon cannot read rows back, so ask for nothing back
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    f.reset();
+    show("ok","Thank you, " + payload.full_name.split(" ")[0] + ". Your enquiry has been received. A counselor will contact you on WhatsApp or by email within 24 hours.");
+  } catch (err) {
+    console.error(err);
+    show("err","Sorry, something went wrong. Please try again or message us on WhatsApp.");
+  } finally { btn.disabled = false; btn.textContent = "Submit my enquiry"; }
+});
+</script>
+</body>
+</html>
